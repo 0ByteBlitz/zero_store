@@ -1,4 +1,5 @@
 #include "cache.h"
+#include "utils.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -12,19 +13,9 @@ typedef struct KeyValue {
 #define TABLE_SIZE 128
 static KeyValue *table[TABLE_SIZE];
 
-// Simple hash function (using djb2)
-static unsigned int hash(const char *key) {
-    unsigned long hash = 5381;
-    int c;
-    while ((c = *key++)) {
-        hash = ((hash << 5) + hash) + c;
-    }
-    return hash % TABLE_SIZE;
-}
-
 // Function to set key
 void set_key(const char *key, const char *value) {
-    unsigned int idx = hash(key);
+    unsigned int idx = hash(key, TABLE_SIZE);
     KeyValue *curr = table[idx];
 
     // Check if the key already exists, update if found
@@ -48,7 +39,7 @@ void set_key(const char *key, const char *value) {
 
 // Function to get value by key
 const char* get_key(const char *key) {
-    unsigned int idx = hash(key);
+    unsigned int idx = hash(key, TABLE_SIZE);
     KeyValue *curr = table[idx];
     while (curr) {
         if(strcmp(curr->key, key) == 0) {
@@ -61,19 +52,22 @@ const char* get_key(const char *key) {
 
 // Function to delete by key 
 void del_key(const char *key) {
-    unsigned int idx = hash(key);
+    unsigned int idx = hash(key, TABLE_SIZE);
     KeyValue *curr = table[idx];
     KeyValue *prev = NULL;
     while (curr) {
         if(strcmp(curr->key, key) == 0) {
+            KeyValue *to_free = curr;
             if(prev) {
                 prev->next = curr->next;
             } else {
                 table[idx] = curr->next;
-                free(curr->key);
-                free(curr->value);
-                free(curr);
             }
+            curr = curr->next;
+            free(to_free->key);
+            free(to_free->value);
+            free(to_free);
+        } else {
             prev = curr;
             curr = curr->next;
         }

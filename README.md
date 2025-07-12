@@ -22,3 +22,4 @@
 - Run the server using `./zerostore`.  
 - Connect with `nc localhost 12345`
 - Use commands like `SET foo bar`.
+- You can also run test with `valgrind` if you are on linux

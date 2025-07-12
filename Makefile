@@ -1,7 +1,7 @@
 cc = gcc
 CFLAGS = -Wall -Wextra -Iinclude
 
-SRC = src/main.c src/cache.c
+SRC = src/main.c src/cache.c src/utils.c
 OUT = zerostore
 
 all:

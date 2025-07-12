@@ -9,6 +9,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include "cache.h"
+#include "utils.h"
 
 int main() {
     printf("Zerostore Started.\n");
@@ -65,7 +66,7 @@ int main() {
 
     // Setting a receive timeout
     struct timeval timeout;
-    timeout.tv_sec = 10;
+    timeout.tv_sec = 100;
     timeout.tv_usec = 0;
     setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
 
@@ -86,26 +87,53 @@ int main() {
             break;
         } else {
             buffer[bytes_received] = '\0'; // null terminate
-
-            // Remove the trailing newline
             buffer[strcspn(buffer, "\r\n")] = '\0';
-            // Printing printable characters from client
             printf("Client says: %s\n", buffer);
 
-            // Echo back to client
-            send(client_fd, buffer, strlen(buffer), 0);
-
-            // Quit if client sends Exit 
-            if(strcmp(buffer, "EXIT") == 0) {
+            // Parse command
+            char *cmd = NULL, *key = NULL, *value = NULL;
+            int tokens = split_command(buffer, &cmd, &key, &value);
+            char response[1024] = "";
+            if (tokens == 0 || !cmd) {
+                snprintf(response, sizeof(response), "ERR Invalid command\n");
+            } else if (strcasecmp(cmd, "SET") == 0 && tokens == 3 && key && value) {
+                set_key(key, value);
+                snprintf(response, sizeof(response), "OK\n");
+            } else if (strcasecmp(cmd, "SET") == 0) {
+                snprintf(response, sizeof(response), "ERR Invalid SET command\n");
+            } else if (strcasecmp(cmd, "GET") == 0 && tokens >= 2) {
+                const char *result = get_key(key);
+                if (result) {
+                    snprintf(response, sizeof(response), "%s\n", result);
+                } else {
+                    snprintf(response, sizeof(response), "NOT FOUND\n");
+                }
+            } else if (strcasecmp(cmd, "DEL") == 0 && tokens >= 2) {
+                const char *result = get_key(key);
+                if (result) {
+                    del_key(key);
+                    snprintf(response, sizeof(response), "OK\n");
+                } else {
+                    snprintf(response, sizeof(response), "NOT FOUND\n");
+                }
+            } else if (strcasecmp(cmd, "EXIT") == 0) {
+                snprintf(response, sizeof(response), "BYE\n");
+                send(client_fd, response, strlen(response), 0);
                 printf("Client wants to close the connection. Closing connection..\n");
                 break;
+            } else {
+                snprintf(response, sizeof(response), "ERR Unknown command\n");
             }
+            send(client_fd, response, strlen(response), 0);
         }
     }
 
     // Closing the connections
     close(client_fd);
     close(server_fd);
+
+    // Clean up
+    free_cache();
 
     return 0;
 }
