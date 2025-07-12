@@ -8,7 +8,7 @@
 #include <arpa/inet.h>
 #include <ctype.h>
 #include <errno.h>
-
+#include "cache.h"
 
 int main() {
     printf("Zerostore Started.\n");
@@ -102,10 +102,10 @@ int main() {
             }
         }
     }
-    
 
     // Closing the connections
     close(client_fd);
     close(server_fd);
+
     return 0;
 }
